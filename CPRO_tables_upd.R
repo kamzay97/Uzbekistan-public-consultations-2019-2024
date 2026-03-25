@@ -259,19 +259,12 @@ for (i in seq_len(nrow(devs_by_year))) {
   y    <- devs_by_year$year[i]
   curr <- devs_by_year$devs[[i]]
 
-  # HHI
-  shares <- full %>%
-    filter(year == y) %>%
-    count(developer) %>%
-    mutate(share = n / sum(n))
-  hhi <- round(sum(shares$share^2), 3)
+  
 
   if (i == 1) {
     table5_rows[[i]] <- tibble(
       year = y, active = length(curr),
-      new_entrants = "---", exited = "---", continuing = "---",
-      hhi = hhi
-    )
+      new_entrants = "---", exited = "---", continuing = "---",)
   } else {
     prev <- devs_by_year$devs[[i - 1]]
     new_e <- setdiff(curr, prev)
@@ -281,9 +274,7 @@ for (i in seq_len(nrow(devs_by_year))) {
       year = y, active = length(curr),
       new_entrants = as.character(length(new_e)),
       exited       = as.character(length(exit)),
-      continuing   = as.character(length(cont)),
-      hhi = hhi
-    )
+      continuing   = as.character(length(cont)),)
   }
 }
 
@@ -297,7 +288,7 @@ gt_table5 <- table5 %>%
     new_entrants = "New Entrants",
     exited       = "Exited",
     continuing   = "Continuing",
-    hhi          = "HHI"
+    
   ) %>%
   tab_header(
     title = "Table 5. Developer Participation Dynamics, 2019-2024")
@@ -305,7 +296,56 @@ gt_table5 <- table5 %>%
 print(gt_table5)
 
 # =============================================================================
-# TABLE 6: Comment Intensity by Leading Regulatory Sphere
+# TABLE 6: Public Engagement by Regulatory Sphere
+# =============================================================================
+table6_sphere <- full %>%
+  group_by(sphere) %>%
+  summarise(
+    n_regs         = n(),
+    total_comments = sum(comments, na.rm = TRUE),
+    mean_comments  = round(mean(comments, na.rm = TRUE), 1),
+    with_comments  = sum(comments > 0, na.rm = TRUE),
+    zero_comment   = sum(comments == 0, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    pct_regs     = n_regs / sum(n_regs),
+    pct_comments = total_comments / sum(total_comments),
+    engage_rate  = with_comments / n_regs,
+    zero_rate    = zero_comment / n_regs
+  ) %>%
+  arrange(desc(total_comments))
+
+gt_table6_sphere <- table6_sphere %>%
+  mutate(
+    n_regs         = format(n_regs, big.mark = ","),
+    total_comments = format(total_comments, big.mark = ","),
+    pct_regs       = paste0(round(pct_regs * 100, 1), "%"),
+    pct_comments   = paste0(round(pct_comments * 100, 1), "%"),
+    engage_rate    = paste0(round(engage_rate * 100, 1), "%"),
+    zero_rate      = paste0(round(zero_rate * 100, 1), "%")
+  ) %>%
+  select(sphere, n_regs, total_comments, mean_comments,
+         engage_rate, zero_rate, pct_regs, pct_comments) %>%
+  gt() %>%
+  cols_label(
+    sphere         = "Regulatory Sphere",
+    n_regs         = "No. of Regs",
+    total_comments = "Total Comments",
+    mean_comments  = "Mean",
+    engage_rate    = "Engage. Rate",
+    zero_rate      = "% Zero",
+    pct_regs       = "% of All Regs",
+    pct_comments   = "% of All Comments"
+  ) %>%
+  tab_header(
+    title = "Table 6. Public Engagement by Regulatory Sphere, 2019-2024")
+
+print(gt_table6_sphere)
+
+
+# =============================================================================
+# TABLE 7: Comment Intensity by Leading Regulatory Sphere
 # =============================================================================
 leading_spheres <- c("Education, Science and Culture", "Business", "Banking")
 
@@ -342,12 +382,12 @@ gt_table6 <- table6_display %>%
     metric = "Metric"
   ) %>%
   tab_header(
-    title = "Table 6. Comment Intensity by Leading Regulatory Sphere, 2019-2024")
+    title = "Table 7. Comment Intensity by Leading Regulatory Sphere, 2019-2024")
 
 print(gt_table6)
 
 # =============================================================================
-# TABLE 7: Temporal Profile of the High-Engagement Subset (50+ Comments)
+# TABLE 8: Temporal Profile of the High-Engagement Subset (50+ Comments)
 # =============================================================================
 # Use main dataset filtered to 50+ for consistency
 high_from_full <- full %>% filter(comments >= 50)
@@ -401,12 +441,12 @@ gt_table7 <- table7 %>%
     pct_year        = "% of Year's Regs"
   ) %>%
   tab_header(
-    title = "Table 7. Temporal Profile of the High-Engagement Subset (50+ Comments), 2019-2024")
+    title = "Table 8. Temporal Profile of the High-Engagement Subset (50+ Comments), 2019-2024")
 
 print(gt_table7)
 
 # =============================================================================
-# TABLE 8: Sectoral Composition: Full Dataset vs. High-Engagement Subset
+# TABLE 9: Sectoral Composition: Full Dataset vs. High-Engagement Subset
 # =============================================================================
 full_sphere <- full %>%
   count(sphere, name = "full_n") %>%
@@ -470,12 +510,12 @@ gt_table8 <- table8_display %>%
     over_rep  = "Over-rep."
   ) %>%
   tab_header(
-    title = "Table 8. Sectoral Composition: Full Dataset vs. High-Engagement Subset (50+ Comments)")
+    title = "Table 9. Sectoral Composition: Full Dataset vs. High-Engagement Subset (50+ Comments)")
 
 print(gt_table8)
 
 # =============================================================================
-# TABLE 9: Leading Developing Agencies in the High-Engagement Subset
+# TABLE 10: Leading Developing Agencies in the High-Engagement Subset
 # =============================================================================
 # Use the 50+ Excel file for agency names (more detailed naming)
 high_agency <- high %>%
@@ -547,12 +587,12 @@ gt_table9 <- table9 %>%
     rate_50    = "50+ Rate"
   ) %>%
   tab_header(
-    title = "Table 9. Leading Developing Agencies in the High-Engagement Subset (50+ Comments)")
+    title = "Table 10. Leading Developing Agencies in the High-Engagement Subset (50+ Comments)")
 
 print(gt_table9)
 
 # =============================================================================
-# TABLE 10: Ten Most-Commented Draft Regulations
+# TABLE 11: Ten Most-Commented Draft Regulations
 # =============================================================================
 # Use the full dataset (sorted by comments descending) for top 10
 table10 <- full %>%
@@ -581,12 +621,12 @@ gt_table10 <- table10 %>%
     type_abbr = "Type"
   ) %>%
   tab_header(
-    title = "Table 10. Ten Most-Commented Draft Regulations, 2019-2024")
+    title = "Table 11. Ten Most-Commented Draft Regulations, 2019-2024")
 
 print(gt_table10)
 
 # =============================================================================
-# TABLE 11: Regulatory Type: Full Dataset vs. High-Engagement Subset
+# TABLE 12: Regulatory Type: Full Dataset vs. High-Engagement Subset
 # =============================================================================
 full_type <- full %>%
   mutate(
@@ -639,6 +679,6 @@ gt_table11 <- table11 %>%
     over_rep     = "Over-rep."
   ) %>%
   tab_header(
-    title = "Table 11. Regulatory Type: Full Dataset vs. High-Engagement Subset")
+    title = "Table 12. Regulatory Type: Full Dataset vs. High-Engagement Subset")
 
 print(gt_table11)
